@@ -5,4 +5,3 @@ compile:
 
 clean:
 	rm ebin/*.beam -rf
-	rm thrift/gen-erl/* -rf
