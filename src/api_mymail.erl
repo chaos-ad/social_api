@@ -4,24 +4,55 @@
 ([
     parse_client_options/1,
     parse_server_options/1,
-    process_payment/2,
-    invoke_method/3
+    validate_auth/2,
+    invoke_method/3,
+    process_payment/2
 ]).
 
--record(client_options, {app_id, secret_key, host}).
+-record(client_options, {app_id, secret_key}).
 -record(server_options, {app_id, secret_key, callback, mode}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 parse_client_options(Options) ->
-    {[AppID,  SecretKey,  Host], _} = utils:parse_options(
-     [app_id, secret_key, host], Options),
-    {ok, #client_options{app_id=AppID, secret_key=SecretKey, host=Host}}.
+    {[AppID,  SecretKey], _} = utils:parse_options(
+     [app_id, secret_key], Options),
+    {ok, #client_options{app_id=AppID, secret_key=SecretKey}}.
 
 parse_server_options(Options) ->
     {[AppID,  SecretKey,  Callback, Mode], _} = utils:parse_options(
      [app_id, secret_key, callback, mode], Options),
     {ok, #server_options{app_id=AppID, secret_key=SecretKey, callback=Callback, mode=Mode}}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+validate_auth({_, UserData, Signature}, #client_options{secret_key=SecretKey}) ->
+    Data = UserData ++ SecretKey,
+    case binary_to_list(utils:md5_hex(Data)) of
+        Signature -> ok;
+        _         -> {error, invalid_signature}
+    end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+invoke_method({Group, Function}, Args, #client_options{app_id=AppID, secret_key=SecretKey}) ->
+    Method        = social_utils:concat([{atom_to_list(Group), atom_to_list(Function)}], $., []),
+    Required      = [{format, "json"}, {secure, 1}, {method, Method}, {app_id, AppID}],
+    Arguments     = social_utils:merge(Args, Required),
+    UnsignedQuery = social_utils:concat(Arguments, $=, []) ++ SecretKey,
+    SignedQuery   = social_utils:concat(social_utils:merge(Arguments, [{sig, utils:md5_hex(UnsignedQuery)}]), $=, $&),
+
+    Request = "http://www.appsmail.ru/platform/api" ++ "?" ++ SignedQuery,
+
+    case catch(social_utils:http_request(Request)) of
+        {ok, {{_HttpVer, 200, _Msg}, _Headers, Body}} ->
+            mochijson2:decode(Body);
+        {error, Reason} ->
+            {error, Reason};
+        Unexpected ->
+            {error, unexpected_response, Unexpected}
+    end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -96,10 +127,5 @@ send_response(Request, {error, retry}) ->
 
 send_response(Request, {error, _}) ->
     send_response(Request, {2, 700}).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-invoke_method({_Group, _Method}, _Args, #client_options{app_id=_AppID, secret_key=_SecretKey, host=_Host}) ->
-    {error, not_implemented}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

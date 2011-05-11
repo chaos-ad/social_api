@@ -4,10 +4,10 @@
 ([
     parse_client_options/1,
     parse_server_options/1,
-    process_payment/2,
-    invoke_method/3
+    validate_auth/2,
+    invoke_method/3,
+    process_payment/2
 ]).
-
 
 -record(client_options, {app_id, secret_key, viewer_id, host}).
 -record(server_options, {app_id, secret_key, callback, mode}).
@@ -26,8 +26,12 @@ parse_server_options(Options) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-process_payment(_Request, _ServerOptions) ->
-    {error, not_implemented}.
+validate_auth({UserID, _, Signature}, #client_options{app_id=AppID, secret_key=SecretKey}) ->
+    Data = social_utils:concat([AppID, UserID, SecretKey], $_),
+    case binary_to_list(utils:md5_hex(Data)) of
+        Signature -> ok;
+        _         -> {error, invalid_signature}
+    end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -69,5 +73,10 @@ invoke_method({Group, Function}, Args, #client_options{app_id=AppID, secret_key=
         Unexpected ->
             {error, unexpected_response, Unexpected}
     end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+process_payment(_Request, _ServerOptions) ->
+    {error, not_implemented}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

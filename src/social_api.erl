@@ -18,7 +18,8 @@
     start_link/2,
     stop/1,
     stop/2,
-    call/3,
+    validate_auth/2,
+    invoke_method/3,
     test/0
 ]).
 
@@ -34,11 +35,13 @@ stop_module({Module, Pid}) -> Module:stop(Pid).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-start_link(Options)        -> gen_server:start_link( ?MODULE, Options, [] ).
-start_link(Name, Options)  -> gen_server:start_link( Name, ?MODULE, Options, [] ).
-stop(Pid)                  -> stop(Pid, shutdown).
-stop(Pid, Reason)          -> gen_server:call(Pid, {shutdown, Reason}, infinity).
-call(Pid, Method, Args)    -> gen_server:call(Pid, {call, Method, Args}).
+start_link(Options)                 -> gen_server:start_link( ?MODULE, Options, [] ).
+start_link(Name, Options)           -> gen_server:start_link( Name, ?MODULE, Options, [] ).
+stop(Pid)                           -> stop(Pid, shutdown).
+stop(Pid, Reason)                   -> gen_server:call(Pid, {shutdown, Reason}, infinity).
+
+validate_auth(Pid, AuthData)        -> gen_server:call(Pid, {validate_auth, AuthData}).
+invoke_method(Pid, Method, Args)    -> gen_server:call(Pid, {invoke_method, Method, Args}).
 
 init(Options) ->
     process_flag(trap_exit, true),
@@ -61,8 +64,12 @@ init(Options) ->
 
     {ok, #state{client_pid=ClientPid, server_pid=ServerPid}}.
 
-handle_call({call, Method, Args}, From, State=#state{client_pid=ClientPid}) ->
-    spawn( fun() -> gen_server:reply(From, social_client:call(ClientPid, Method, Args)) end ),
+handle_call({invoke_method, Method, Args}, From, State=#state{client_pid=ClientPid}) ->
+    spawn( fun() -> gen_server:reply(From, social_client:invoke_method(ClientPid, Method, Args)) end ),
+    {noreply, State};
+
+handle_call({validate_auth, AuthData}, From, State=#state{client_pid=ClientPid}) ->
+    spawn( fun() -> gen_server:reply(From, social_client:validate_auth(ClientPid, AuthData)) end ),
     {noreply, State};
 
 handle_call({shutdown, Reason}, _From, State=#state{client_pid=ClientPid, server_pid=ServerPid}) ->
@@ -142,7 +149,7 @@ test(Options) ->
 
 test_operation(Pid, Method, Args) ->
     ?LOG_INFO(": invoking ~p with args ~p...", [Method, Args]),
-    Result = ?MODULE:call(Pid, Method, Args),
+    Result = ?MODULE:invoke_method(Pid, Method, Args),
     ?LOG_INFO(": invoking ~p: result: ~p", [Method, Result]),
     ok.
 
@@ -156,7 +163,7 @@ test_operations(odnoklassniki, Pid) ->
 get_uid(Pid, N) ->
     Login = "test_user_" ++ integer_to_list(N),
     Passwd = Login ++ "_pwd",
-    case ?MODULE:call(Pid, {auth, login}, [{user_name, Login}, {password, Passwd}]) of
+    case ?MODULE:invoke_method(Pid, {auth, login}, [{user_name, Login}, {password, Passwd}]) of
         {struct, [{<<"uid">>, UID}, _, _, _, _, _]} -> binary_to_list(UID);
         Another -> {error, response_parsing_failed, Another}
     end.

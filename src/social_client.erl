@@ -18,7 +18,8 @@
     start_link/2,
     stop/1,
     stop/2,
-    call/3,
+    validate_auth/2,
+    invoke_method/3,
     test/0
 ]).
 
@@ -31,7 +32,8 @@ start_link(Name, Options)  -> gen_server:start_link( Name, ?MODULE, Options, [] 
 stop(Pid)                  -> stop(Pid, shutdown).
 stop(Pid, Reason)          -> gen_server:call(Pid, {shutdown, Reason}, infinity).
 
-call(Pid, Method, Args)    -> gen_server:call(Pid, {call, Method, Args}).
+validate_auth(Pid, AuthData)        -> gen_server:call(Pid, {validate_auth, AuthData}).
+invoke_method(Pid, Method, Args)    -> gen_server:call(Pid, {invoke_method, Method, Args}).
 
 init(Options) ->
     {[Network], OtherOptions} = utils:parse_options([network], Options),
@@ -39,8 +41,12 @@ init(Options) ->
     {ok, Data} = Module:parse_client_options(OtherOptions),
     {ok, #state{module=Module, data=Data}}.
 
-handle_call({call, Method, Args}, From, State=#state{module=Module, data=Data}) ->
+handle_call({invoke_method, Method, Args}, From, State=#state{module=Module, data=Data}) ->
     spawn( fun() -> gen_server:reply(From, Module:invoke_method(Method, Args, Data)) end ),
+    {noreply, State};
+
+handle_call({validate_auth, AuthData}, From, State=#state{module=Module, data=Data}) ->
+    spawn( fun() -> gen_server:reply(From, Module:validate_auth(AuthData, Data)) end ),
     {noreply, State};
 
 handle_call({shutdown, Reason}, _From, State) ->
@@ -95,6 +101,7 @@ test(Options) ->
         {ok, Pid} ->
 
             {network, Network} = proplists:lookup(network, Options),
+            ok = test_auth(Network, Pid),
             ok = test_operations(Network, Pid),
 
             ?assertEqual(ok,   ?MODULE:stop(Pid)),
@@ -109,9 +116,38 @@ test(Options) ->
     process_flag(trap_exit, OldVal),
     ?LOG_INFO(": testing ~p : ~p", [?MODULE, R]), R.
 
+
+test_auth(vkontakte, Pid) ->
+    ?LOG_TRACE(": Testing vkontakte auth...", []),
+    UserID      = "1111111",
+    UserData    = "0",
+	InvalidHash = "deadbeafdeadbeafdeadbeafdeadbeaf",
+    {error, _}  = social_client:validate_auth(Pid, {UserID, UserData, InvalidHash}),
+    ok;
+
+test_auth(odnoklassniki, Pid) ->
+    ?LOG_TRACE(": Testing odnoklassniki auth...", []),
+    UserID      = "1111111111111111111",
+    UserData    = "DEADBEAFDEADBEAFDEADBEAFDEADBEAFDEADBEAFDEADBEAFDEA",
+    InvalidHash = "deadbeafdeadbeafdeadbeafdeadbeaf",
+    {error, _}  = social_client:validate_auth(Pid, {UserID, UserData, InvalidHash}),
+    ok;
+
+test_auth(mymail, Pid) ->
+    ?LOG_TRACE(": Testing mymail auth...", []),
+    UserID      = "3072581181014944200",
+    UserID      = "1111111111111111111",
+    UserData    = "app_id=1111111authentication_key=11111111111111111111111111111111"
+                  "ext_perm=notificationsis_app_user=1oid=1111111111111111111session_expire=1111111111"
+                  "session_key=1111111111111111111111111111111fvid=1111111111111111111"
+                  "window_id=CometName_11111111111111111111111111111111",
+    InvalidHash = "deadbeafdeadbeafdeadbeafdeadbeaf",
+    {error, _}  = social_client:validate_auth(Pid, {UserID, UserData, InvalidHash}),
+    ok.
+
 test_operation(Pid, Method, Args) ->
     ?LOG_INFO(": invoking ~p with args ~p...", [Method, Args]),
-    Result = ?MODULE:call(Pid, Method, Args),
+    Result = ?MODULE:invoke_method(Pid, Method, Args),
     ?LOG_INFO(": invoking ~p: result: ~p", [Method, Result]),
     ok.
 
@@ -120,12 +156,16 @@ test_operations(vkontakte, Pid) ->
 
 test_operations(odnoklassniki, Pid) ->
     Uids = [ get_uid(Pid, N) || N <- lists:seq(1, 19) ],
-    ?LOG_TRACE(": Users: ~p", [Uids]).
+    ?LOG_TRACE(": Users: ~p", [Uids]);
+
+test_operations(mymail, Pid) ->
+    Response = test_operation(Pid, {friends, get}, [{uid,"3072581181014944200"}]),
+    ?LOG_TRACE(": my.mail.ru response: ~p", [Response]).
 
 get_uid(Pid, N) ->
     Login = "test_user_" ++ integer_to_list(N),
     Passwd = Login ++ "_pwd",
-    case ?MODULE:call(Pid, {auth, login}, [{user_name, Login}, {password, Passwd}]) of
+    case ?MODULE:invoke_method(Pid, {auth, login}, [{user_name, Login}, {password, Passwd}]) of
         {struct, [{<<"uid">>, UID}, _, _, _, _, _]} -> binary_to_list(UID);
         Another -> {error, response_parsing_failed, Another}
     end.

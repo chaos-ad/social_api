@@ -6,10 +6,11 @@
     sort/1,
     delete/2,
     find/2,
+    concat/2,
     concat/3,
-    concat/4,
     http_request/1,
-    get_network_module/1
+    get_network_module/1,
+    test/0
 ]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -29,16 +30,28 @@ find(Key, List) ->
         false        -> nil
     end.
 
-concat(Args, RowSeparator, ColSeparator) ->
-    lists:flatten(lists:reverse(concat(Args, RowSeparator, ColSeparator, []))).
+concat(Args, Separator) ->
+    lists:flatten(lists:reverse(concat_vals(Args, Separator, []))).
 
-concat([{Key, Value}], RowSeparator, _, Result) ->
+concat(Args, RowSeparator, ColSeparator) ->
+    lists:flatten(lists:reverse(concat_pairs(Args, RowSeparator, ColSeparator, []))).
+
+concat_vals([], _, Result) ->
+    Result;
+concat_vals([Value], _, Result) ->
+    [utils:to_list(Value)|Result];
+concat_vals([Value|Tail], Separator, Result) ->
+    S = [utils:to_list(Value), Separator],
+    concat_vals(Tail, Separator, [S|Result]).
+
+concat_pairs([], _, _, Result) ->
+    Result;
+concat_pairs([{Key, Value}], RowSeparator, _, Result) ->
     S = [utils:to_list(Key), RowSeparator, utils:to_list(Value)],
     [S|Result];
-
-concat([{Key, Value}|Tail], RowSeparator, ColSeparator, Result) ->
+concat_pairs([{Key, Value}|Tail], RowSeparator, ColSeparator, Result) ->
     S = [utils:to_list(Key), RowSeparator, utils:to_list(Value), ColSeparator],
-    concat(Tail, RowSeparator, ColSeparator, [S|Result]).
+    concat_pairs(Tail, RowSeparator, ColSeparator, [S|Result]).
 
 http_request(Request) ->
     case code:ensure_loaded(httpc) of
@@ -50,3 +63,13 @@ get_network_module(Network) when is_atom(Network) ->
     list_to_atom( "api_" ++ atom_to_list(Network) ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+-include_lib("eunit/include/eunit.hrl").
+
+test() ->
+    ?assertEqual(social_utils:concat([], $-), []),
+    ?assertEqual(social_utils:concat([a], $-), "a"),
+    ?assertEqual(social_utils:concat([a, b], $-), "a-b"),
+    ?assertEqual(social_utils:concat([a, b, c], $-), "a-b-c"),
+    ?assertEqual(social_utils:concat([{a, x}, {b,y},{c,z}], $=, $;), "a=x;b=y;c=z"),
+    ok.

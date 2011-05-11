@@ -1,19 +1,16 @@
 social_api
 ===================
 
-Библиотека для работы с социальными сетями.
-
-Вроде бы, должна быть легко расширяемой в плане добавления новых социальных сетей.
-
-На создание вдохновила библиотека Erlyweb Vkontakte (с) Макс Лапшин. (https://github.com/maxlapshin/vkontakte).
+This library provides access to REST-api for several social networks.
+Just now it is only 3 popular russian networks. More may come later.
 
 ===================
 
 TODO:
 
-* Убрать hand-made логирование.
-* Добавить функции для авторизации пользователей социальных сетей.
-* По возможности, использовать Keepalive-соединения.
-* Лимитировать количество одновременных подключений.
-* Лимитировать количество запросов в секунду.
+* Remove hand-made logging. Right now it suits my needs, but it may annoy another users, if they appear.
+* Use pool of keep-alive connections
+* Limit simultaneous connections.
+* Limit requests per second.
+
 

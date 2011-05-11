@@ -4,8 +4,9 @@
 ([
     parse_client_options/1,
     parse_server_options/1,
-    process_payment/2,
-    invoke_method/3
+    validate_auth/2,
+    invoke_method/3,
+    process_payment/2
 ]).
 
 -record(client_options, {app_id, secret_key, host}).
@@ -22,6 +23,36 @@ parse_server_options(Options) ->
     {[AppID,  SecretKey,  Callback, Mode], _} = utils:parse_options(
      [app_id, secret_key, callback, mode], Options),
     {ok, #server_options{app_id=AppID, secret_key=SecretKey, callback=Callback, mode=Mode}}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+validate_auth({UserID, UserData, Signature}, #client_options{secret_key=SecretKey}) ->
+    Data = UserID ++ UserData ++ SecretKey,
+    CorrectSignature = binary_to_list(utils:md5_hex(Data)),
+    case CorrectSignature of
+        Signature -> ok;
+        _         -> {error, invalid_signature}
+    end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+invoke_method({Group, Function}, Args, #client_options{app_id=AppID, secret_key=SecretKey, host=Host}) ->
+    Method        = social_utils:concat([{atom_to_list(Group), atom_to_list(Function)}], $/, []),
+    Required      = [{format, "JSON"}, {application_key, AppID}],
+    Arguments     = social_utils:merge(Args, Required),
+    UnsignedQuery = social_utils:concat(Arguments, $=, []) ++ SecretKey,
+    SignedQuery   = social_utils:concat(social_utils:merge(Arguments, [{sig, utils:md5_hex(UnsignedQuery)}]), $=, $&),
+
+    Request = "http://" ++ Host ++ "/api/" ++ Method ++ "?" ++ SignedQuery,
+
+    case catch(social_utils:http_request(Request)) of
+        {ok, {{_HttpVer, 200, _Msg}, _Headers, Body}} ->
+            mochijson2:decode(Body);
+        {error, Reason} ->
+            {error, Reason};
+        Unexpected ->
+            {error, unexpected_response, Unexpected}
+    end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -96,22 +127,3 @@ send_response(Request, {error, _}) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-invoke_method({Group, Function}, Args, #client_options{app_id=AppID, secret_key=SecretKey, host=Host}) ->
-    Method        = social_utils:concat([{atom_to_list(Group), atom_to_list(Function)}], $/, []),
-    Required      = [{format, "JSON"}, {application_key, AppID}],
-    Arguments     = social_utils:merge(Args, Required),
-    UnsignedQuery = social_utils:concat(Arguments, $=, []) ++ SecretKey,
-    SignedQuery   = social_utils:concat(social_utils:merge(Arguments, [{sig, utils:md5_hex(UnsignedQuery)}]), $=, $&),
-
-    Request = "http://" ++ Host ++ "/api/" ++ Method ++ "?" ++ SignedQuery,
-
-    case catch(social_utils:http_request(Request)) of
-        {ok, {{_HttpVer, 200, _Msg}, _Headers, Body}} ->
-            mochijson2:decode(Body);
-        {error, Reason} ->
-            {error, Reason};
-        Unexpected ->
-            {error, unexpected_response, Unexpected}
-    end.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
