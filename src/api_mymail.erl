@@ -24,12 +24,11 @@ parse_server_options(Options) ->
      [app_id, secret_key, callback, mode], Options),
     {ok, #server_options{app_id=AppID, secret_key=SecretKey, callback=Callback, mode=Mode}}.
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 validate_auth({_, UserData, Signature}, #client_options{secret_key=SecretKey}) ->
     Data = UserData ++ SecretKey,
-    case binary_to_list(utils:md5_hex(Data)) of
+    case utils:md5_hex(Data) of
         Signature -> ok;
         _         -> {error, invalid_signature}
     end.
@@ -77,7 +76,7 @@ validate_keys(AppID, SecretKey, Args) ->
             Args2 = social_utils:sort(Args),
             Args3 = social_utils:delete("sig", Args2),
             UnsignedQuery = social_utils:concat(Args3, $=, []) ++ SecretKey,
-            Signature     = binary_to_list(utils:md5_hex(UnsignedQuery)),
+            Signature     = utils:md5_hex(UnsignedQuery),
             case social_utils:find("sig", Args2) of
                 Signature -> ok;
                 _         -> {error, invalid_signature}

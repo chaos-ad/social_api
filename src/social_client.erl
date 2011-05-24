@@ -121,7 +121,7 @@ test_auth(vkontakte, Pid) ->
     ?LOG_TRACE(": Testing vkontakte auth...", []),
     UserID      = "1111111",
     UserData    = "0",
-	InvalidHash = "deadbeafdeadbeafdeadbeafdeadbeaf",
+	InvalidHash = <<deadbeafdeadbeafdeadbeafdeadbeaf>>,
     {error, _}  = social_client:validate_auth(Pid, {UserID, UserData, InvalidHash}),
     ok;
 
@@ -129,7 +129,7 @@ test_auth(odnoklassniki, Pid) ->
     ?LOG_TRACE(": Testing odnoklassniki auth...", []),
     UserID      = "1111111111111111111",
     UserData    = "DEADBEAFDEADBEAFDEADBEAFDEADBEAFDEADBEAFDEADBEAFDEA",
-    InvalidHash = "deadbeafdeadbeafdeadbeafdeadbeaf",
+    InvalidHash = <<deadbeafdeadbeafdeadbeafdeadbeaf>>,
     {error, _}  = social_client:validate_auth(Pid, {UserID, UserData, InvalidHash}),
     ok;
 
@@ -141,7 +141,7 @@ test_auth(mymail, Pid) ->
                   "ext_perm=notificationsis_app_user=1oid=1111111111111111111session_expire=1111111111"
                   "session_key=1111111111111111111111111111111fvid=1111111111111111111"
                   "window_id=CometName_11111111111111111111111111111111",
-    InvalidHash = "deadbeafdeadbeafdeadbeafdeadbeaf",
+    InvalidHash = <<deadbeafdeadbeafdeadbeafdeadbeaf>>,
     {error, _}  = social_client:validate_auth(Pid, {UserID, UserData, InvalidHash}),
     ok.
 
