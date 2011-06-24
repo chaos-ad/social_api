@@ -46,21 +46,23 @@ invoke_method(Pid, Method, Args)    -> gen_server:call(Pid, {invoke_method, Meth
 init(Options) ->
     process_flag(trap_exit, true),
 
-    {[Network, AppID,  SecretKey,  ClientOptions,  ServerOptions], _} = utils:parse_options(
-     [network, app_id, secret_key, client_options, server_options], Options),
+    Network   = proplists:get_value(network,    Options),
+    AppID     = proplists:get_value(app_id,     Options),
+    SecretKey = proplists:get_value(secret_key, Options),
 
-    AllClientOptions =  case ClientOptions of
-                            none -> nil;
-                            _    -> [{network, Network}, {app_id, AppID}, {secret_key, SecretKey} | ClientOptions]
-                        end,
+    BaseOptions   = [{network, Network}, {app_id, AppID}, {secret_key, SecretKey}],
 
-    AllServerOptions =  case ServerOptions of
-                            none -> nil;
-                            _    -> [{network, Network}, {app_id, AppID}, {secret_key, SecretKey} | ServerOptions]
-                        end,
+    ClientOptions = case proplists:get_value(client_options, Options) of
+                        undefined  -> nil;
+                        ClientOpts -> lists:append(BaseOptions, ClientOpts)
+                    end,
+    ServerOptions = case proplists:get_value(server_options, Options) of
+                        undefined  -> nil;
+                        ServerOpts -> lists:append(BaseOptions, ServerOpts)
+                    end,
 
-    {ok, ClientPid} = start_module({social_client, AllClientOptions}),
-    {ok, ServerPid} = start_module({social_server, AllServerOptions}),
+    {ok, ClientPid} = start_module({social_client, ClientOptions}),
+    {ok, ServerPid} = start_module({social_server, ServerOptions}),
 
     {ok, #state{client_pid=ClientPid, server_pid=ServerPid}}.
 

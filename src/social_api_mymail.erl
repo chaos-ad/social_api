@@ -1,4 +1,4 @@
--module(api_mymail).
+-module(social_api_mymail).
 
 -export
 ([
@@ -15,20 +15,20 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 parse_client_options(Options) ->
-    {[AppID,  SecretKey], _} = utils:parse_options(
-     [app_id, secret_key], Options),
-    {ok, #client_options{app_id=AppID, secret_key=SecretKey}}.
+    {ok, #client_options{app_id     = proplists:get_value(app_id,     Options),
+                         secret_key = proplists:get_value(secret_key, Options)}}.
 
 parse_server_options(Options) ->
-    {[AppID,  SecretKey,  Callback, Mode], _} = utils:parse_options(
-     [app_id, secret_key, callback, mode], Options),
-    {ok, #server_options{app_id=AppID, secret_key=SecretKey, callback=Callback, mode=Mode}}.
+    {ok, #server_options{app_id     = proplists:get_value(app_id,     Options),
+                         secret_key = proplists:get_value(secret_key, Options),
+                         callback   = proplists:get_value(callback,   Options),
+                         mode       = proplists:get_value(mode,       Options)}}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 validate_auth({_, UserData, Signature}, #client_options{secret_key=SecretKey}) ->
     Data = UserData ++ SecretKey,
-    case utils:md5_hex(Data) of
+    case social_api_utils:md5_hex(Data) of
         Signature -> ok;
         _         -> {error, invalid_signature}
     end.
@@ -36,15 +36,15 @@ validate_auth({_, UserData, Signature}, #client_options{secret_key=SecretKey}) -
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 invoke_method({Group, Function}, Args, #client_options{app_id=AppID, secret_key=SecretKey}) ->
-    Method        = social_utils:concat([{atom_to_list(Group), atom_to_list(Function)}], $., []),
+    Method        = social_api_utils:concat([{atom_to_list(Group), atom_to_list(Function)}], $., []),
     Required      = [{format, "json"}, {secure, 1}, {method, Method}, {app_id, AppID}],
-    Arguments     = social_utils:merge(Args, Required),
-    UnsignedQuery = social_utils:concat(Arguments, $=, []) ++ SecretKey,
-    SignedQuery   = social_utils:concat(social_utils:merge(Arguments, [{sig, utils:md5_hex(UnsignedQuery)}]), $=, $&),
+    Arguments     = social_api_utils:merge(Args, Required),
+    UnsignedQuery = social_api_utils:concat(Arguments, $=, []) ++ SecretKey,
+    SignedQuery   = social_api_utils:concat(social_api_utils:merge(Arguments, [{sig, social_api_utils:md5_hex(UnsignedQuery)}]), $=, $&),
 
     Request = "http://www.appsmail.ru/platform/api" ++ "?" ++ SignedQuery,
 
-    case catch(social_utils:http_request(Request)) of
+    case catch(social_api_utils:http_request(Request)) of
         {ok, {{_HttpVer, 200, _Msg}, _Headers, Body}} ->
             mochijson2:decode(Body);
         {error, Reason} ->
@@ -71,13 +71,13 @@ process_payment(Request, #server_options{app_id=AppID, secret_key=SecretKey, cal
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 validate_keys(AppID, SecretKey, Args) ->
-    case social_utils:find("app_id", Args) of
+    case social_api_utils:find("app_id", Args) of
         AppID ->
-            Args2 = social_utils:sort(Args),
-            Args3 = social_utils:delete("sig", Args2),
-            UnsignedQuery = social_utils:concat(Args3, $=, []) ++ SecretKey,
-            Signature     = utils:md5_hex(UnsignedQuery),
-            case social_utils:find("sig", Args2) of
+            Args2 = social_api_utils:sort(Args),
+            Args3 = social_api_utils:delete("sig", Args2),
+            UnsignedQuery = social_api_utils:concat(Args3, $=, []) ++ SecretKey,
+            Signature     = social_api_utils:md5_hex(UnsignedQuery, list),
+            case social_api_utils:find("sig", Args2) of
                 Signature -> ok;
                 _         -> {error, invalid_signature}
             end;
@@ -87,18 +87,20 @@ validate_keys(AppID, SecretKey, Args) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 invoke_callback(raw, Callback, Args) ->
-    utils:call_functor(Callback, [Args]);
+    social_api_utils:call_functor(Callback, [Args]);
 
 invoke_callback(parsed, Callback, Args) ->
-    UID = social_utils:find("uid", Args),
-    ProductCode = social_utils:find("service_id", Args),
-    ProductOption = nil,
-    Amount = case social_utils:find("sms_price", Args) of
-                nil -> social_utils:find("other_price", Args);
-                SmsPrice -> SmsPrice
-             end,
-    Profit = social_utils:find("profit", Args),
-    invoke_callback(raw, Callback, {UID, {ProductCode, ProductOption}, {Amount, Profit}}).
+
+    TransactionID   = social_api_utils:find("transaction_id", Args),
+    UID             = social_api_utils:find("uid",            Args),
+    ProductCode     = social_api_utils:find("service_id",     Args),
+    ProductOption   = nil,
+    Amount          = case social_api_utils:find("sms_price", Args, integer) of
+                          nil      -> social_api_utils:find("other_price", Args, integer);
+                          SmsPrice -> SmsPrice
+                      end,
+    Profit          = social_api_utils:find("profit", Args, integer),
+    invoke_callback(raw, Callback, {{TransactionID, UID}, {ProductCode, ProductOption}, {Amount, Profit}}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

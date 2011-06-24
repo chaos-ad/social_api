@@ -1,4 +1,4 @@
--module(social_server).
+-module(social_api_server).
 
 -include_lib("logger.hrl").
 
@@ -33,17 +33,19 @@ stop(Pid, Reason)          -> gen_server:call(Pid, {shutdown, Reason}, infinity)
 init(Options) ->
     process_flag(trap_exit, true),
 
-    {[Network, IP, Port], OtherOptions} = utils:parse_options([network, ip, port], Options),
+    Network = proplists:get_value(network, Options),
+    IP      = proplists:get_value(ip,      Options),
+    Port    = proplists:get_value(port,    Options),
 
-    Module = social_utils:get_network_module(Network),
+    Module = social_api_utils:get_network_module(Network),
 
     Self = self(),
     Loop = fun(Request) -> gen_server:call(Self, {payment, Request}) end,
 
-    ?LOG_INFO(": starting payment server at ~p:~p", [IP, Port]),
+    ?LOG_INFO(": starting social server at ~p:~p", [IP, Port]),
     {ok, Pid} = mochiweb_http:start([{ip, IP}, {port, Port}, {loop, Loop}, {acceptor_pool_size, 1}]),
 
-    {ok, Data} = Module:parse_server_options(OtherOptions),
+    {ok, Data} = Module:parse_server_options(Options),
 
     {ok, #state{pid=Pid, module=Module, data=Data}}.
 
@@ -52,7 +54,7 @@ handle_call({payment, Request}, From, State=#state{module=Module, data=Data}) ->
     {noreply, State};
 
 handle_call({shutdown, Reason}, _From, State=#state{pid=Pid}) ->
-    ?LOG_DEBUG(": stopping payment server...", []),
+    ?LOG_DEBUG(": stopping social server...", []),
     ok = mochiweb_http:stop(Pid),
     {stop, Reason, ok, State};
 

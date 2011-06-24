@@ -1,4 +1,4 @@
--module(social_client).
+-module(social_api_client).
 
 -include_lib("logger.hrl").
 
@@ -36,9 +36,9 @@ validate_auth(Pid, AuthData)        -> gen_server:call(Pid, {validate_auth, Auth
 invoke_method(Pid, Method, Args)    -> gen_server:call(Pid, {invoke_method, Method, Args}).
 
 init(Options) ->
-    {[Network], OtherOptions} = utils:parse_options([network], Options),
-    Module = social_utils:get_network_module(Network),
-    {ok, Data} = Module:parse_client_options(OtherOptions),
+    Network = proplists:get_value(network, Options),
+    Module  = social_api_utils:get_network_module(Network),
+    {ok, Data} = Module:parse_client_options(Options),
     {ok, #state{module=Module, data=Data}}.
 
 handle_call({invoke_method, Method, Args}, From, State=#state{module=Module, data=Data}) ->
@@ -91,8 +91,14 @@ test() ->
         {secret_key,        "BBBBBBBBBBBBBBBBBBBBBBBB"},
         {host,              "api-sandbox.odnoklassniki.ru:8088"} ],
 
+    MmOptions = [
+        {network,           mymail},
+        {app_id,            "111111"},
+        {secret_key,        "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"} ],
+
     test(VkOptions),
-    test(OkOptions).
+    test(OkOptions),
+    test(MmOptions).
 
 
 test(Options) ->
@@ -121,7 +127,7 @@ test_auth(vkontakte, Pid) ->
     ?LOG_TRACE(": Testing vkontakte auth...", []),
     UserID      = "1111111",
     UserData    = "0",
-	InvalidHash = <<deadbeafdeadbeafdeadbeafdeadbeaf>>,
+	InvalidHash = <<"deadbeafdeadbeafdeadbeafdeadbeaf">>,
     {error, _}  = social_client:validate_auth(Pid, {UserID, UserData, InvalidHash}),
     ok;
 
@@ -129,7 +135,7 @@ test_auth(odnoklassniki, Pid) ->
     ?LOG_TRACE(": Testing odnoklassniki auth...", []),
     UserID      = "1111111111111111111",
     UserData    = "DEADBEAFDEADBEAFDEADBEAFDEADBEAFDEADBEAFDEADBEAFDEA",
-    InvalidHash = <<deadbeafdeadbeafdeadbeafdeadbeaf>>,
+    InvalidHash = <<"deadbeafdeadbeafdeadbeafdeadbeaf">>,
     {error, _}  = social_client:validate_auth(Pid, {UserID, UserData, InvalidHash}),
     ok;
 
@@ -141,7 +147,7 @@ test_auth(mymail, Pid) ->
                   "ext_perm=notificationsis_app_user=1oid=1111111111111111111session_expire=1111111111"
                   "session_key=1111111111111111111111111111111fvid=1111111111111111111"
                   "window_id=CometName_11111111111111111111111111111111",
-    InvalidHash = <<deadbeafdeadbeafdeadbeafdeadbeaf>>,
+    InvalidHash = <<"deadbeafdeadbeafdeadbeafdeadbeaf">>,
     {error, _}  = social_client:validate_auth(Pid, {UserID, UserData, InvalidHash}),
     ok.
 
