@@ -124,7 +124,7 @@ test(Options) ->
 
 
 test_auth(vkontakte, Pid) ->
-    ?LOG_TRACE(": Testing vkontakte auth...", []),
+    ?LOG_DEBUG(": Testing vkontakte auth...", []),
     UserID      = "1111111",
     UserData    = "0",
 	InvalidHash = <<"deadbeafdeadbeafdeadbeafdeadbeaf">>,
@@ -132,7 +132,7 @@ test_auth(vkontakte, Pid) ->
     ok;
 
 test_auth(odnoklassniki, Pid) ->
-    ?LOG_TRACE(": Testing odnoklassniki auth...", []),
+    ?LOG_DEBUG(": Testing odnoklassniki auth...", []),
     UserID      = "1111111111111111111",
     UserData    = "DEADBEAFDEADBEAFDEADBEAFDEADBEAFDEADBEAFDEADBEAFDEA",
     InvalidHash = <<"deadbeafdeadbeafdeadbeafdeadbeaf">>,
@@ -140,7 +140,7 @@ test_auth(odnoklassniki, Pid) ->
     ok;
 
 test_auth(mymail, Pid) ->
-    ?LOG_TRACE(": Testing mymail auth...", []),
+    ?LOG_DEBUG(": Testing mymail auth...", []),
     UserID      = "3072581181014944200",
     UserID      = "1111111111111111111",
     UserData    = "app_id=1111111authentication_key=11111111111111111111111111111111"
@@ -162,11 +162,11 @@ test_operations(vkontakte, Pid) ->
 
 test_operations(odnoklassniki, Pid) ->
     Uids = [ get_uid(Pid, N) || N <- lists:seq(1, 19) ],
-    ?LOG_TRACE(": Users: ~p", [Uids]);
+    ?LOG_DEBUG(": Users: ~p", [Uids]);
 
 test_operations(mymail, Pid) ->
     Response = test_operation(Pid, {friends, get}, [{uid,"3072581181014944200"}]),
-    ?LOG_TRACE(": my.mail.ru response: ~p", [Response]).
+    ?LOG_DEBUG(": my.mail.ru response: ~p", [Response]).
 
 get_uid(Pid, N) ->
     Login = "test_user_" ++ integer_to_list(N),

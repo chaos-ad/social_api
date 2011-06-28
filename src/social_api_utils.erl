@@ -1,11 +1,54 @@
 -module(social_api_utils).
+-compile(export_all).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--export([md5_hex/1, md5_hex/2, bin_to_hex/1, list_to_hex/1]).
--export([call_functor/2, to_list/1, to_binary/1]).
--export([merge/2, sort/1, delete/2, find/2, find/3, concat/2, concat/3]).
--export([http_request/1, get_network_module/1, test/0]).
+merge(List1, List2) ->
+    lists:keymerge(1, sort(List1), sort(List2)).
+
+sort(List) ->
+    lists:keysort(1, List).
+
+delete(Key, List) ->
+    lists:keydelete(Key, 1, List).
+
+find(Key, List) ->
+    proplists:get_value(Key, List, nil).
+
+find(Key, List, integer) ->
+    case find(Key, List) of
+        nil -> nil;
+        Res -> list_to_integer(Res)
+    end.
+
+concat(Args, Separator) ->
+    lists:flatten(lists:reverse(concat_vals(Args, Separator, []))).
+
+concat(Args, RowSeparator, ColSeparator) ->
+    lists:flatten(lists:reverse(concat_pairs(Args, RowSeparator, ColSeparator, []))).
+
+concat_vals([], _, Result) ->
+    Result;
+concat_vals([Value], _, Result) ->
+    [to_list(Value)|Result];
+concat_vals([Value|Tail], Separator, Result) ->
+    S = [to_list(Value), Separator],
+    concat_vals(Tail, Separator, [S|Result]).
+
+concat_pairs([], _, _, Result) ->
+    Result;
+concat_pairs([{Key, Value}], RowSeparator, _, Result) ->
+    S = [utils:to_list(Key), RowSeparator, social_api_utils:to_list(Value)],
+    [S|Result];
+concat_pairs([{Key, Value}|Tail], RowSeparator, ColSeparator, Result) ->
+    S = [utils:to_list(Key), RowSeparator, social_api_utils:to_list(Value), ColSeparator],
+    concat_pairs(Tail, RowSeparator, ColSeparator, [S|Result]).
+
+http_request(Request) ->
+    httpc:request(Request).
+
+get_network_module(Network) when is_atom(Network) ->
+    list_to_atom( "social_api_" ++ atom_to_list(Network) ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -45,58 +88,6 @@ int_to_hex(N) when N < 256 ->
 
 hex(N) when N < 10 -> $0+N;
 hex(N) when N >= 10, N < 16 -> $a + (N-10).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-merge(List1, List2) ->
-    lists:keymerge(1, sort(List1), sort(List2)).
-
-sort(List) ->
-    lists:keysort(1, List).
-
-delete(Key, List) ->
-    lists:keydelete(Key, 1, List).
-
-find(Key, List) ->
-    proplists:get_value(Key, List, nil).
-
-find(Key, List, integer) ->
-    case find(Key, List) of
-        nil -> nil;
-        Res -> list_to_integer(Res)
-    end.
-
-concat(Args, Separator) ->
-    lists:flatten(lists:reverse(concat_vals(Args, Separator, []))).
-
-concat(Args, RowSeparator, ColSeparator) ->
-    lists:flatten(lists:reverse(concat_pairs(Args, RowSeparator, ColSeparator, []))).
-
-concat_vals([], _, Result) ->
-    Result;
-concat_vals([Value], _, Result) ->
-    [utils:to_list(Value)|Result];
-concat_vals([Value|Tail], Separator, Result) ->
-    S = [utils:to_list(Value), Separator],
-    concat_vals(Tail, Separator, [S|Result]).
-
-concat_pairs([], _, _, Result) ->
-    Result;
-concat_pairs([{Key, Value}], RowSeparator, _, Result) ->
-    S = [utils:to_list(Key), RowSeparator, social_api_utils:to_list(Value)],
-    [S|Result];
-concat_pairs([{Key, Value}|Tail], RowSeparator, ColSeparator, Result) ->
-    S = [utils:to_list(Key), RowSeparator, social_api_utils:to_list(Value), ColSeparator],
-    concat_pairs(Tail, RowSeparator, ColSeparator, [S|Result]).
-
-http_request(Request) ->
-    case code:ensure_loaded(httpc) of
-        {error, nofile} -> http:request(Request);
-        {module, httpc} -> httpc:request(Request)
-    end.
-
-get_network_module(Network) when is_atom(Network) ->
-    list_to_atom( "social_api_" ++ atom_to_list(Network) ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

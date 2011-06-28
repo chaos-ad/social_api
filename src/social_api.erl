@@ -106,7 +106,7 @@ terminate(Reason, _State) ->
 -include_lib("eunit/include/eunit.hrl").
 
 test() ->
-    PaymentCallback = fun(Req) -> ?LOG_TRACE(": Payment request received: ~p", [Req]), ok end,
+    PaymentCallback = fun(Req) -> ?LOG_DEBUG(": Payment request received: ~p", [Req]), ok end,
 
     VkOptions = [
         {network,               vkontakte},
@@ -160,7 +160,7 @@ test_operations(vkontakte, Pid) ->
 
 test_operations(odnoklassniki, Pid) ->
     Uids = [ get_uid(Pid, N) || N <- lists:seq(1, 19) ],
-    ?LOG_TRACE(": Users: ~p", [Uids]).
+    ?LOG_DEBUG(": Users: ~p", [Uids]).
 
 get_uid(Pid, N) ->
     Login = "test_user_" ++ integer_to_list(N),

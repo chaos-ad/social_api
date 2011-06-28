@@ -85,7 +85,7 @@ terminate(Reason, _State) ->
 -include_lib("eunit/include/eunit.hrl").
 
 test() ->
-    PaymentCallback = fun(Req) -> ?LOG_TRACE(": Payment request received: ~p", [Req]), ok end,
+    PaymentCallback = fun(Req) -> ?LOG_DEBUG(": Payment request received: ~p", [Req]), ok end,
 
     Options = [ {network,           mymail},
                 {ip,                "0.0.0.0"},
