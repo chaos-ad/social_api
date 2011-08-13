@@ -2,26 +2,8 @@
 
 -include_lib("logger.hrl").
 
--export
-([
-    init/1,
-    handle_call/3,
-    handle_cast/2,
-    handle_info/2,
-    code_change/3,
-    terminate/2
-]).
-
--export
-([
-    start_link/1,
-    start_link/2,
-    stop/1,
-    stop/2,
-    validate_auth/2,
-    invoke_method/3,
-    test/0
-]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
+-export([start_link/1, start_link/2, stop/1, stop/2, validate_auth/2, invoke_method/3, test/0]).
 
 -record(state, {module, data}).
 
@@ -36,42 +18,41 @@ validate_auth(Pid, AuthData)        -> gen_server:call(Pid, {validate_auth, Auth
 invoke_method(Pid, Method, Args)    -> gen_server:call(Pid, {invoke_method, Method, Args}).
 
 init(Options) ->
+    ?LOG_INFO("starting social client...", []),
     Network = proplists:get_value(network, Options),
     Module  = social_api_utils:get_network_module(Network),
     {ok, Data} = Module:parse_client_options(Options),
     {ok, #state{module=Module, data=Data}}.
 
-handle_call({invoke_method, Method, Args}, From, State=#state{module=Module, data=Data}) ->
-    spawn( fun() -> gen_server:reply(From, Module:invoke_method(Method, Args, Data)) end ),
-    {noreply, State};
+handle_call({invoke_method, Method, Args}, _, State=#state{module=Module, data=Data}) ->
+    {reply, Module:invoke_method(Method, Args, Data), State};
 
-handle_call({validate_auth, AuthData}, From, State=#state{module=Module, data=Data}) ->
-    spawn( fun() -> gen_server:reply(From, Module:validate_auth(AuthData, Data)) end ),
-    {noreply, State};
+handle_call({validate_auth, AuthData}, _, State=#state{module=Module, data=Data}) ->
+    {reply, Module:validate_auth(AuthData, Data), State};
 
 handle_call({shutdown, Reason}, _From, State) ->
     {stop, Reason, ok, State};
 
 handle_call(Msg, _From, State) ->
-    ?LOG_ERROR(": unexpected call received: ~p", [Msg]),
+    ?LOG_ERROR("unexpected call received: ~p", [Msg]),
     {noreply, State}.
 
 handle_cast(Msg, State) ->
-    ?LOG_ERROR(": unexpected cast received: ~p", [Msg]),
+    ?LOG_ERROR("unexpected cast received: ~p", [Msg]),
     {noreply, State}.
 
 handle_info( {'EXIT', _Pid, _Msg}, State ) ->
-    ?LOG_INFO(": exit signal received from ~p: ~p", [_Pid, _Msg]),
+    ?LOG_INFO("exit signal received from ~p: ~p", [_Pid, _Msg]),
     {noreply, State};
 
 handle_info( Msg, State ) ->
-    ?LOG_ERROR(": unexpected info received: ~p", [Msg]),
+    ?LOG_ERROR("unexpected info received: ~p", [Msg]),
     {noreply, State}.
 
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
 terminate(Reason, _State) ->
-    ?LOG_DEBUG(": terminated with reason ~p", [Reason]),
+    ?LOG_INFO("terminated with reason ~p", [Reason]),
     ok.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -120,27 +101,27 @@ test(Options) ->
             Err
     end,
     process_flag(trap_exit, OldVal),
-    ?LOG_INFO(": testing ~p : ~p", [?MODULE, R]), R.
+    ?LOG_INFO("testing ~p : ~p", [?MODULE, R]), R.
 
 
 test_auth(vkontakte, Pid) ->
-    ?LOG_DEBUG(": Testing vkontakte auth...", []),
+    ?LOG_INFO("Testing vkontakte auth...", []),
     UserID      = "1111111",
     UserData    = "0",
 	InvalidHash = <<"deadbeafdeadbeafdeadbeafdeadbeaf">>,
-    {error, _}  = social_client:validate_auth(Pid, {UserID, UserData, InvalidHash}),
+    {error, _}  = ?MODULE:validate_auth(Pid, {UserID, UserData, InvalidHash}),
     ok;
 
 test_auth(odnoklassniki, Pid) ->
-    ?LOG_DEBUG(": Testing odnoklassniki auth...", []),
+    ?LOG_INFO("Testing odnoklassniki auth...", []),
     UserID      = "1111111111111111111",
     UserData    = "DEADBEAFDEADBEAFDEADBEAFDEADBEAFDEADBEAFDEADBEAFDEA",
     InvalidHash = <<"deadbeafdeadbeafdeadbeafdeadbeaf">>,
-    {error, _}  = social_client:validate_auth(Pid, {UserID, UserData, InvalidHash}),
+    {error, _}  = ?MODULE:validate_auth(Pid, {UserID, UserData, InvalidHash}),
     ok;
 
 test_auth(mymail, Pid) ->
-    ?LOG_DEBUG(": Testing mymail auth...", []),
+    ?LOG_INFO("Testing mymail auth...", []),
     UserID      = "3072581181014944200",
     UserID      = "1111111111111111111",
     UserData    = "app_id=1111111authentication_key=11111111111111111111111111111111"
@@ -148,13 +129,13 @@ test_auth(mymail, Pid) ->
                   "session_key=1111111111111111111111111111111fvid=1111111111111111111"
                   "window_id=CometName_11111111111111111111111111111111",
     InvalidHash = <<"deadbeafdeadbeafdeadbeafdeadbeaf">>,
-    {error, _}  = social_client:validate_auth(Pid, {UserID, UserData, InvalidHash}),
+    {error, _}  = ?MODULE:validate_auth(Pid, {UserID, UserData, InvalidHash}),
     ok.
 
 test_operation(Pid, Method, Args) ->
-    ?LOG_INFO(": invoking ~p with args ~p...", [Method, Args]),
+    ?LOG_INFO("invoking ~p with args ~p...", [Method, Args]),
     Result = ?MODULE:invoke_method(Pid, Method, Args),
-    ?LOG_INFO(": invoking ~p: result: ~p", [Method, Result]),
+    ?LOG_INFO("invoking ~p: result: ~p", [Method, Result]),
     ok.
 
 test_operations(vkontakte, Pid) ->
@@ -162,11 +143,11 @@ test_operations(vkontakte, Pid) ->
 
 test_operations(odnoklassniki, Pid) ->
     Uids = [ get_uid(Pid, N) || N <- lists:seq(1, 19) ],
-    ?LOG_DEBUG(": Users: ~p", [Uids]);
+    ?LOG_INFO("Users: ~p", [Uids]);
 
 test_operations(mymail, Pid) ->
     Response = test_operation(Pid, {friends, get}, [{uid,"3072581181014944200"}]),
-    ?LOG_DEBUG(": my.mail.ru response: ~p", [Response]).
+    ?LOG_INFO("my.mail.ru response: ~p", [Response]).
 
 get_uid(Pid, N) ->
     Login = "test_user_" ++ integer_to_list(N),

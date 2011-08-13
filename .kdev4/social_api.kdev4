@@ -1,5 +1,5 @@
 [Buildset]
-BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x01\x00\x00\x00\x14\x00s\x00o\x00c\x00i\x00a\x00l\x00_\x00a\x00p\x00i)
+BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
 
 [Launch]
 Launch Configurations=Launch Configuration 0
@@ -11,9 +11,9 @@ Name=New Native Application Configuration
 Type=Native Application
 
 [Launch][Launch Configuration 0][Data]
-Arguments=-pa ./ebin -s social_api test -init stop
-Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x02\x00\x00\x00\x14\x00s\x00o\x00c\x00i\x00a\x00l\x00_\x00a\x00p\x00i\x00\x00\x00\x06\x00a\x00l\x00l)
-Dependency Action=Build
+Arguments=-pa ./ebin ./deps/mochiweb/ebin -boot start_sasl -s social_api -config priv/example
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
+Dependency Action=Nothing
 EnvironmentGroup=default
 Executable=erl
 External Terminal=konsole --noclose --workdir %workdir -e %exe

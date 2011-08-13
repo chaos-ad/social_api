@@ -1,28 +1,27 @@
 -module(social_api_vkontakte).
 
+-include("logger.hrl").
+
 -export
 ([
     parse_client_options/1,
     parse_server_options/1,
     validate_auth/2,
     invoke_method/3,
-    process_payment/2
+    process_payment/3
 ]).
 
--record(client_options, {app_id, secret_key, viewer_id, host}).
--record(server_options, {app_id, secret_key}).
+-record(client_options, {app_id, secret_key, host}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 parse_client_options(Options) ->
     {ok, #client_options{app_id     = proplists:get_value(app_id,     Options),
                          secret_key = proplists:get_value(secret_key, Options),
-                         viewer_id  = proplists:get_value(viewer_id,  Options),
                          host       = proplists:get_value(host,       Options)}}.
 
-parse_server_options(Options) ->
-    {ok, #server_options{app_id     = proplists:get_value(app_id,     Options),
-                         secret_key = proplists:get_value(secret_key, Options)}}.
+parse_server_options(_) ->
+    {error, not_implemented}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -46,7 +45,7 @@ invoke_method({secure, Function}, Args, #client_options{app_id=AppID, secret_key
 
     Request = "http://" ++ Host ++ "/api.php?" ++ SignedQuery,
 
-    case catch(social_api_utils:http_request(Request)) of
+    case catch(httpc:request(Request)) of
         {ok, {{_HttpVer, 200, _Msg}, _Headers, Body}} ->
             mochijson2:decode(Body);
         {error, Reason} ->
@@ -55,17 +54,19 @@ invoke_method({secure, Function}, Args, #client_options{app_id=AppID, secret_key
             {error, unexpected_response, Unexpected}
     end;
 
-invoke_method({Group, Function}, Args, #client_options{app_id=AppID, secret_key=SecretKey, viewer_id=ViewerID, host=Host}) ->
+invoke_method({Group, Function}, Args, #client_options{app_id=AppID, secret_key=SecretKey, host=Host}) ->
+
     Method   = social_api_utils:concat([{atom_to_list(Group), atom_to_list(Function)}], $., []),
     Required = [{api_id, AppID}, {format, json}, {method, Method}, {v, "3.0"}],
 
-    Arguments     = social_api_utils:merge(Args, Required),
+    ViewerID      = social_api_utils:to_list(proplists:get_value(viewer_id, Args, "")),
+    Arguments     = social_api_utils:merge(social_api_utils:delete(viewer_id, Args), Required),
     UnsignedQuery = ViewerID ++ social_api_utils:concat(Arguments, $=, []) ++ SecretKey,
     SignedQuery   = social_api_utils:concat(social_api_utils:merge(Arguments, [{sig, social_api_utils:md5_hex(UnsignedQuery)}]), $=, $&),
 
     Request = "http://" ++ Host ++ "/api.php?" ++ SignedQuery,
 
-    case catch(social_api_utils:http_request(Request)) of
+    case catch(httpc:request(Request)) of
         {ok, {{_HttpVer, 200, _Msg}, _Headers, Body}} ->
             mochijson2:decode(Body);
         {error, Reason} ->
@@ -76,7 +77,7 @@ invoke_method({Group, Function}, Args, #client_options{app_id=AppID, secret_key=
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-process_payment(_Request, _ServerOptions) ->
+process_payment(_Request, _Callback, _ServerOptions) ->
     {error, not_implemented}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -1,7 +1,14 @@
 all: compile
 
-compile: 
-	erl -pa "./ebin" -make
+get-deps:
+	./rebar get-deps
+
+compile:
+	./rebar compile
 
 clean:
-	rm ebin/*.beam -rf
+	./rebar clean
+
+release:
+	./rebar generate
+

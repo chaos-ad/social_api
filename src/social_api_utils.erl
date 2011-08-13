@@ -38,19 +38,22 @@ concat_vals([Value|Tail], Separator, Result) ->
 concat_pairs([], _, _, Result) ->
     Result;
 concat_pairs([{Key, Value}], RowSeparator, _, Result) ->
-    S = [utils:to_list(Key), RowSeparator, social_api_utils:to_list(Value)],
+    S = [social_api_utils:to_list(Key), RowSeparator, social_api_utils:to_list(Value)],
     [S|Result];
 concat_pairs([{Key, Value}|Tail], RowSeparator, ColSeparator, Result) ->
-    S = [utils:to_list(Key), RowSeparator, social_api_utils:to_list(Value), ColSeparator],
+    S = [social_api_utils:to_list(Key), RowSeparator, social_api_utils:to_list(Value), ColSeparator],
     concat_pairs(Tail, RowSeparator, ColSeparator, [S|Result]).
-
-http_request(Request) ->
-    httpc:request(Request).
 
 get_network_module(Network) when is_atom(Network) ->
     list_to_atom( "social_api_" ++ atom_to_list(Network) ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+timestamp() ->
+    now_to_seconds(erlang:now()).
+
+now_to_seconds({Mega, Sec, _}) ->
+    (Mega * 1000000) + Sec.
 
 call_functor({M, F, A}, Args) ->
     erlang:apply(M, F, Args ++ A);
