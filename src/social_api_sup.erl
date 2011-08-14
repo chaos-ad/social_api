@@ -30,11 +30,9 @@ init(_) ->
     {ok, AppID}     = application:get_env(app_id),
     {ok, SecretKey} = application:get_env(secret_key),
 
-    BaseArgs = [{network, Network}, {app_id, AppID}, {secret_key, SecretKey}],
+    BaseArgs  = [{network, Network}, {app_id, AppID}, {secret_key, SecretKey}],
     ChildList = [{social_api_client, client_options}, {social_api_server, server_options}],
-    Result = {ok, { {one_for_one, 5, 10}, make_child_spec(BaseArgs, ChildList)} },
-%     ?LOG_INFO("Supervisor spec = ~p", [Result]),
-    Result.
+    {ok, { {one_for_one, 5, 10}, make_child_spec(BaseArgs, ChildList)} }.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

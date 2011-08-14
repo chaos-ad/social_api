@@ -27,10 +27,10 @@ init(Options) ->
     Module = social_api_utils:get_network_module(Network),
 
     Self = self(),
+    Name = social_api_mochiserver,
     Loop = fun(Request) -> gen_server:call(Self, {payment, Request}) end,
-
-    ?LOG_INFO("starting social server at ~p:~p", [IP, Port]),
-    {ok, Pid} = mochiweb_http:start([{ip, IP}, {port, Port}, {loop, Loop}, {acceptor_pool_size, 1}]),
+    MochiOptions = [{ip, IP}, {port, Port}, {loop, Loop}, {name, Name}, {acceptor_pool_size, 1}],
+    {ok, Pid} = mochiweb_http:start(MochiOptions),
 
     {ok, Data} = Module:parse_server_options(Options),
 

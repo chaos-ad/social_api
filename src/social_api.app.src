@@ -2,7 +2,7 @@
 {application, social_api,
  [{description, "Social API"},
   {vsn, "1.0"},
-  {registered, [social_api_client, social_api_server]},
+  {registered, [social_api_client, social_api_server, social_api_mochiserver]},
   {mod, {social_api_app, []}},
   {env, []},
   {applications, [kernel, stdlib, inets]}]}.
