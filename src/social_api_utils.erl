@@ -38,10 +38,10 @@ concat_vals([Value|Tail], Separator, Result) ->
 concat_pairs([], _, _, Result) ->
     Result;
 concat_pairs([{Key, Value}], RowSeparator, _, Result) ->
-    S = [social_api_utils:to_list(Key), RowSeparator, social_api_utils:to_list(Value)],
+    S = [to_list(Key), RowSeparator, to_list(Value)],
     [S|Result];
 concat_pairs([{Key, Value}|Tail], RowSeparator, ColSeparator, Result) ->
-    S = [social_api_utils:to_list(Key), RowSeparator, social_api_utils:to_list(Value), ColSeparator],
+    S = [to_list(Key), RowSeparator, to_list(Value), ColSeparator],
     concat_pairs(Tail, RowSeparator, ColSeparator, [S|Result]).
 
 get_network_module(Network) when is_atom(Network) ->
@@ -97,11 +97,11 @@ hex(N) when N >= 10, N < 16 -> $a + (N-10).
 -include_lib("eunit/include/eunit.hrl").
 
 test() ->
-    ?assertEqual(social_api_utils:concat([], $-), []),
-    ?assertEqual(social_api_utils:concat([a], $-), "a"),
-    ?assertEqual(social_api_utils:concat([a, b], $-), "a-b"),
-    ?assertEqual(social_api_utils:concat([a, b, c], $-), "a-b-c"),
-    ?assertEqual(social_api_utils:concat([{a, x}, {b,y},{c,z}], $=, $;), "a=x;b=y;c=z"),
+    ?assertEqual(concat([], $-), []),
+    ?assertEqual(concat([a], $-), "a"),
+    ?assertEqual(concat([a, b], $-), "a-b"),
+    ?assertEqual(concat([a, b, c], $-), "a-b-c"),
+    ?assertEqual(concat([{a, x}, {b,y},{c,z}], $=, $;), "a=x;b=y;c=z"),
     ?assertEqual(md5_hex("Hex is not working?", list),   "a574ec8a309cc5b1512599ec738aaf0a"),
     ?assertEqual(md5_hex("Hello!"),                    <<"952d2c56d0485958336747bcdd98590d">>),
     ?assertEqual(md5_hex("This is a hash, baby!"),     <<"873c569a197a722942ed7d38361a6bdd">>),
