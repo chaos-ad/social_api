@@ -17,12 +17,12 @@
 parse_client_options(Options) ->
     {ok, #client_options{app_id     = proplists:get_value(app_id,     Options),
                          secret_key = proplists:get_value(secret_key, Options),
-                         host       = proplists:get_value(host,       Options)}}.
+                         host       = proplists:get_value(host,       Options, "api.odnoklassniki.ru")}}.
 
 parse_server_options(Options) ->
     {ok, #server_options{app_id     = proplists:get_value(app_id,     Options),
                          secret_key = proplists:get_value(secret_key, Options),
-                         mode       = proplists:get_value(mode,       Options)}}.
+                         mode       = proplists:get_value(mode,       Options, parsed)}}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

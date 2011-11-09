@@ -18,7 +18,7 @@
 parse_client_options(Options) ->
     {ok, #client_options{app_id     = proplists:get_value(app_id,     Options),
                          secret_key = proplists:get_value(secret_key, Options),
-                         host       = proplists:get_value(host,       Options)}}.
+                         host       = proplists:get_value(host,       Options, "api.vkontakte.ru")}}.
 
 parse_server_options(_) ->
     {error, not_implemented}.
