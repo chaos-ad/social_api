@@ -41,7 +41,7 @@ invoke_method({secure, Function}, Args, #client_options{app_id=AppID, secret_key
 
     Arguments     = social_api_utils:merge(Args, Required),
     UnsignedQuery = social_api_utils:concat(Arguments, $=, []) ++ SecretKey,
-    SignedQuery   = social_api_utils:concat(social_api_utils:merge(Arguments, [{sig, social_api_utils:md5_hex(UnsignedQuery)}]), $=, $&),
+    SignedQuery   = mochiweb_util:urlencode(social_api_utils:merge(Arguments, [{sig, social_api_utils:md5_hex(UnsignedQuery)}])),
 
     Request = "http://" ++ Host ++ "/api.php?" ++ SignedQuery,
 

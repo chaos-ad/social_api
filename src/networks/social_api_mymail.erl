@@ -39,12 +39,12 @@ invoke_method({Group, Function}, Args, #client_options{app_id=AppID, secret_key=
     Required      = [{format, "json"}, {secure, 1}, {method, Method}, {app_id, AppID}],
     Arguments     = social_api_utils:merge(Args, Required),
     UnsignedQuery = social_api_utils:concat(Arguments, $=, []) ++ SecretKey,
-    SignedQuery   = social_api_utils:concat(social_api_utils:merge(Arguments, [{sig, social_api_utils:md5_hex(UnsignedQuery)}]), $=, $&),
+    SignedQuery   = mochiweb_util:urlencode(social_api_utils:merge(Arguments, [{sig, social_api_utils:md5_hex(UnsignedQuery)}])),
 
     Request = "http://www.appsmail.ru/platform/api" ++ "?" ++ SignedQuery,
 
     case catch(httpc:request(Request)) of
-        {ok, {{_HttpVer, 200, _Msg}, _Headers, Body}} ->
+        {ok, {_, _, Body}} ->
             mochijson2:decode(Body);
         {error, Reason} ->
             {error, Reason};
