@@ -21,6 +21,9 @@ find(Key, List, integer) ->
         Res -> list_to_integer(Res)
     end.
 
+concat(Args) ->
+    concat(Args, []).
+
 concat(Args, Separator) ->
     lists:flatten(lists:reverse(concat_vals(Args, Separator, []))).
 

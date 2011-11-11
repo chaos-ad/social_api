@@ -1,4 +1,3 @@
 #!/bin/bash
-export ERL_LIBS="./deps/:../:${ERL_LIBS}"
-exec erl -pa ebin -boot start_sasl -s reloader -s social_api -sname social_api@`hostname` -config priv/example
-
+cd `dirname $0`
+exec erl -pa ebin deps/*/ebin -boot start_sasl -config priv/app.config -sname social_apisrv@`hostname` -cookie social_api_cookie -s reloader -s social_api

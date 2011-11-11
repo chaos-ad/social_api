@@ -26,8 +26,8 @@ parse_server_options(Options) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 validate_auth({_, UserData, Signature}, #client_options{secret_key=SecretKey}) ->
-    Data = UserData ++ SecretKey,
-    case social_api_utils:md5_hex(Data) of
+    Data = social_api_utils:concat([UserData, SecretKey]),
+    case social_api_utils:md5_hex(Data, bin) of
         Signature -> ok;
         _         -> {error, invalid_signature}
     end.
