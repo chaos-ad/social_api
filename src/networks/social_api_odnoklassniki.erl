@@ -126,5 +126,3 @@ send_response(Request, {error, _}) ->
     send_response(Request, {1, "Unknown error"}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-to_list(Arg) -> social_api_utils:to_list(Arg).
