@@ -1,6 +1,6 @@
 -module(social_api).
 
--export([start/0, stop/0, validate_auth/1, invoke_method/2, set_payment_callback/1]).
+-export([start/0, stop/0, validate_auth/1, send_message/2, invoke_method/2, set_payment_callback/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -16,6 +16,9 @@ stop() ->
 
 validate_auth(AuthData) ->
     social_api_sup:validate_auth(AuthData).
+
+send_message(Message, Users) ->
+    social_api_sup:send_message(Message, Users).
 
 invoke_method(Method, Args) ->
     social_api_sup:invoke_method(Method, Args).

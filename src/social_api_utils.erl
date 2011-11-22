@@ -18,7 +18,7 @@ find(Key, List) ->
 find(Key, List, integer) ->
     case find(Key, List) of
         nil -> nil;
-        Res -> list_to_integer(Res)
+        Res -> to_integer(Res)
     end.
 
 concat(Args) ->
@@ -47,9 +47,6 @@ concat_pairs([{Key, Value}|Tail], RowSeparator, ColSeparator, Result) ->
     S = [to_list(Key), RowSeparator, to_list(Value), ColSeparator],
     concat_pairs(Tail, RowSeparator, ColSeparator, [S|Result]).
 
-get_network_module(Network) when is_atom(Network) ->
-    list_to_atom( "social_api_" ++ atom_to_list(Network) ).
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 timestamp() ->
@@ -73,6 +70,18 @@ to_list(A) when is_atom(A)      -> atom_to_list(A);
 to_list(A) when is_integer(A)   -> integer_to_list(A);
 to_list(A) when is_float(A)     -> float_to_list(A);
 to_list(A) when is_binary(A)    -> binary_to_list(A).
+
+to_integer(Int) when is_integer(Int) -> Int;
+to_integer(List) when is_list(List) -> list_to_integer(List);
+to_integer(Binary) when is_binary(Binary) -> to_integer(binary_to_list(Binary)).
+
+split(N, List) ->
+    split(N, List, []).
+split(N, List, Res) when is_list(List), length(List) =< N ->
+    lists:reverse([List|Res]);
+split(N, List, Res) when is_list(List), length(List)  > N ->
+    {L1, L2} = lists:split(N, List),
+    split(N, L2, [L1|Res]).
 
 md5_hex(Data) ->
     md5_hex(Data, bin).
