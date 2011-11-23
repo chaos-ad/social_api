@@ -12,7 +12,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-init_client() -> undefined.
+init_client() -> [].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -33,9 +33,9 @@ invoke_method({secure, Function}, Args, State) ->
     SecretKey     = social_api_settings:secret_key(),
     Host          = social_api_settings:client_host("api.vkontakte.ru"),
 
-    Method   = social_api_utils:concat([secure, Function], $.),
-    Required = [{api_id, AppID}, {format, json}, {method, Method}, {v, "3.0"},
-                {random, random:uniform(10000000)}, {timestamp, social_api_utils:timestamp()}],
+    Method        = social_api_utils:concat([secure, Function], $.),
+    Required      = [{api_id, AppID}, {format, json}, {method, Method}, {v, "3.0"},
+                     {random, random:uniform(10000000)}, {timestamp, social_api_utils:timestamp()}],
 
     Arguments     = social_api_utils:merge(Args, Required),
     UnsignedQuery = social_api_utils:concat(Arguments, $=, []) ++ SecretKey,
@@ -43,13 +43,14 @@ invoke_method({secure, Function}, Args, State) ->
 
     Request = "http://" ++ Host ++ "/api.php?" ++ SignedQuery,
 
+    NewState = wait_if_needed(State),
     case catch(httpc:request(Request)) of
         {ok, {{_HttpVer, 200, _Msg}, _Headers, Body}} ->
-            {mochijson2:decode(Body), State};
+            {mochijson2:decode(Body), NewState};
         {error, Reason} ->
-            {{error, Reason}, State};
+            {{error, Reason}, NewState};
         Unexpected ->
-            {{error, {unexpected_response, Unexpected}}, State}
+            {{error, {unexpected_response, Unexpected}}, NewState}
     end;
 
 invoke_method({Group, Function}, Args, State) ->
@@ -58,8 +59,8 @@ invoke_method({Group, Function}, Args, State) ->
     SecretKey     = social_api_settings:secret_key(),
     Host          = social_api_settings:client_host("api.vkontakte.ru"),
 
-    Method   = social_api_utils:concat([Group, Function], $.),
-    Required = [{api_id, AppID}, {format, json}, {method, Method}, {v, "3.0"}],
+    Method        = social_api_utils:concat([Group, Function], $.),
+    Required      = [{api_id, AppID}, {format, json}, {method, Method}, {v, "3.0"}],
 
     ViewerID      = social_api_utils:to_list(proplists:get_value(viewer_id, Args, "")),
     Arguments     = social_api_utils:merge(social_api_utils:delete(viewer_id, Args), Required),
@@ -68,13 +69,31 @@ invoke_method({Group, Function}, Args, State) ->
 
     Request = "http://" ++ Host ++ "/api.php?" ++ SignedQuery,
 
+    NewState = wait_if_needed(State),
     case catch(httpc:request(Request)) of
         {ok, {{_HttpVer, 200, _Msg}, _Headers, Body}} ->
-            {mochijson2:decode(Body), State};
+            {mochijson2:decode(Body), NewState};
         {error, Reason} ->
-            {{error, Reason}, State};
+            {{error, Reason}, NewState};
         Unexpected ->
-            {{error, {unexpected_response, Unexpected}}, State}
+            {{error, {unexpected_response, Unexpected}}, NewState}
+    end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Do not send more than 5 requests per second:
+wait_if_needed(History) ->
+    T1 = erlang:now(),
+    case length(History) =:= 5 of
+        true  ->
+            T2 = lists:nth(5, History),
+            case timer:now_diff(T1, T2) div 1000 of
+                Delta when Delta >= 1000 -> ok;
+                Delta -> timer:sleep(1000 - Delta)
+            end,
+            [erlang:now()];
+        false ->
+            [erlang:now()|History]
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
