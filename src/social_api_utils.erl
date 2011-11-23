@@ -51,8 +51,8 @@ split_delivered(Users, Result) when is_binary(Result) ->
     split_delivered(Users, string:tokens(binary_to_list(Result), ","));
 
 split_delivered(Users, Result) when is_list(Result) ->
-    List1 = ordsets:from_list(lists:sort(lists:map(fun social_api_utils:to_integer/1, Users))),
-    List2 = ordsets:from_list(lists:sort(lists:map(fun social_api_utils:to_integer/1, Result))),
+    List1 = ordsets:from_list(lists:sort(lists:map(fun to_integer/1, Users))),
+    List2 = ordsets:from_list(lists:sort(lists:map(fun to_integer/1, Result))),
     Undelivered = ordsets:subtract(List1, List2),
     Delivered = ordsets:subtract(List1, Undelivered),
     {Delivered, Undelivered}.
