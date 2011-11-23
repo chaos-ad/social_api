@@ -55,6 +55,12 @@ get_env_strict(Env) ->
         Value     -> Value
     end.
 
+get_env_default(Env, Default) ->
+    case get_env(Env) of
+        undefined -> Default;
+        Value     -> Value
+    end.
+
 get_env_strict(Env, Name) ->
     case proplists:get_value(Name, get_env_strict(Env)) of
         undefined -> exit(invalid_settings);
@@ -73,6 +79,6 @@ set_env(Env, Value) ->
     application:set_env(?APPLICATION, Env, Value).
 
 set_env(Env, Name, Value) ->
-    set_env(Env, lists:keystore(Name, 1, get_env_strict(Env), {Name, Value})).
+    set_env(Env, lists:keystore(Name, 1, get_env_default(Env, []), {Name, Value})).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

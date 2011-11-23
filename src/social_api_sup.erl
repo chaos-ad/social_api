@@ -20,7 +20,7 @@ invoke_method(Method, Args) ->
     social_api_client:invoke_method(Method, Args).
 
 set_payment_callback(Callback) ->
-    social_api_server:set_payment_callback(Callback).
+    social_api_settings:set_payment_callback(Callback).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
