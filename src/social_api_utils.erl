@@ -47,6 +47,16 @@ concat_pairs([{Key, Value}|Tail], RowSeparator, ColSeparator, Result) ->
     S = [to_list(Key), RowSeparator, to_list(Value), ColSeparator],
     concat_pairs(Tail, RowSeparator, ColSeparator, [S|Result]).
 
+split_delivered(Users, Result) when is_binary(Result) ->
+    split_delivered(Users, string:tokens(binary_to_list(Result), ","));
+
+split_delivered(Users, Result) when is_list(Result) ->
+    List1 = ordsets:from_list(lists:sort(lists:map(fun social_api_utils:to_integer/1, Users))),
+    List2 = ordsets:from_list(lists:sort(lists:map(fun social_api_utils:to_integer/1, Result))),
+    Undelivered = ordsets:subtract(List1, List2),
+    Delivered = ordsets:subtract(List1, Undelivered),
+    {Delivered, Undelivered}.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 timestamp() ->
@@ -62,7 +72,7 @@ call_functor({M, F}, Args) ->
 call_functor(Functor, Args) ->
     erlang:apply(Functor, Args).
 
-to_binary(X) when is_binary(X)  -> X;
+to_binary(X) when is_binary(X) -> X;
 to_binary(X) -> list_to_binary(to_list(X)).
 
 to_list(A) when is_list(A)      -> A;

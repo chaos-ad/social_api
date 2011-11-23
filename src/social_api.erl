@@ -5,12 +5,12 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 start() ->
-    application:load(social_api),
+    application:load(?MODULE),
     ensure_deps_started(),
-    application:start(social_api).
+    application:start(?MODULE).
 
 stop() ->
-    application:stop(social_api).
+    application:stop(?MODULE).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -35,6 +35,6 @@ ensure_started(App) ->
     end.
 
 ensure_deps_started() ->
-    {ok, DepsList} = application:get_key(social_api, applications),
+    {ok, DepsList} = application:get_key(?MODULE, applications),
     lists:foreach( fun ensure_started/1, DepsList ).
 

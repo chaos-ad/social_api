@@ -2,7 +2,7 @@
 -behaviour(supervisor).
 
 -export([start_link/0, init/1]).
- -export([validate_auth/1, send_message/2, invoke_method/2, set_payment_callback/1]).
+-export([validate_auth/1, send_message/2, invoke_method/2, set_payment_callback/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

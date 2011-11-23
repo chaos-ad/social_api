@@ -1,7 +1,5 @@
 -module(social_api_vkontakte).
 
--include("logger.hrl").
-
 -export
 ([
     init_client/0,
@@ -113,24 +111,14 @@ do_send(Message, Users, State) ->
     {Result, NewState} = invoke_method(Method, Args, State),
     {parse_response(Users, Result), NewState}.
 
-parse_response(Users, {struct,[{<<"response">>,Result}]}) ->
-    {Delivered, Undelivered} = split_delivered(Users, Result),
-    lists:zip(Delivered, lists:duplicate(length(Delivered), ok)) ++
-    lists:zip(Undelivered, lists:duplicate(length(Undelivered), {error, undelivered}));
-
 parse_response(Users, {struct, [{<<"error">>, {struct, ErrorInfo}}]}) ->
     Code = proplists:get_value(<<"error_code">>, ErrorInfo),
     Message = proplists:get_value(<<"error_msg">>, ErrorInfo),
-    lists:zip(Users, lists:duplicate(length(Users), {error, {Code, Message}})).
+    lists:zip(Users, lists:duplicate(length(Users), {error, {Code, Message}}));
 
-split_delivered(Users, Result) when is_binary(Result) ->
-    split_delivered(Users, string:tokens(binary_to_list(Result), ","));
-
-split_delivered(Users, Result) when is_list(Result) ->
-    List1 = ordsets:from_list(lists:sort(lists:map(fun social_api_utils:to_integer/1, Users))),
-    List2 = ordsets:from_list(lists:sort(lists:map(fun social_api_utils:to_integer/1, Result))),
-    Undelivered = ordsets:subtract(List1, List2),
-    Delivered = ordsets:subtract(List1, Undelivered),
-    {Delivered, Undelivered}.
+parse_response(Users, {struct,[{<<"response">>,Result}]}) ->
+    {Delivered, Undelivered} = social_api_utils:split_delivered(Users, Result),
+    lists:zip(Delivered, lists:duplicate(length(Delivered), ok)) ++
+    lists:zip(Undelivered, lists:duplicate(length(Undelivered), {error, undelivered})).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
